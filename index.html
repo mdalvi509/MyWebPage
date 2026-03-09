@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Security: Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
   <title>Milind's Page</title>
   <style>
     * {
@@ -25,6 +29,8 @@
       color: #ecf0f1;
       padding: 20px 0;
       border-right: 3px solid #1a252f;
+      display: flex;
+      flex-direction: column;
     }
 
     #nav-frame h2 {
@@ -54,6 +60,63 @@
     #nav-frame ul li a.active {
       background-color: #3498db;
     }
+
+    /* Activity Log Panel */
+    #log-panel {
+      margin-top: auto;
+      border-top: 1px solid #3d5166;
+    }
+
+    #log-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      color: #bdc3c7;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 10px 20px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #log-toggle:hover { color: #ecf0f1; }
+
+    #log-entries {
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+
+    #log-entries.open { display: block; }
+
+    .log-entry {
+      font-size: 11px;
+      color: #95a5a6;
+      padding: 4px 14px;
+      border-left: 2px solid transparent;
+      word-break: break-word;
+    }
+
+    .log-entry.info  { border-left-color: #3498db; }
+    .log-entry.warn  { border-left-color: #e67e22; color: #e67e22; }
+    .log-entry.error { border-left-color: #e74c3c; color: #e74c3c; }
+
+    #log-clear {
+      width: 100%;
+      background: none;
+      border: none;
+      color: #7f8c8d;
+      font-size: 11px;
+      padding: 4px 14px;
+      text-align: left;
+      cursor: pointer;
+    }
+    #log-clear:hover { color: #e74c3c; }
 
     /* Divider */
     .divider {
@@ -132,8 +195,18 @@
       transition: background 0.2s;
     }
 
-    .message-box button:hover {
-      background-color: #2980b9;
+    .message-box button:hover { background-color: #2980b9; }
+
+    .field-error {
+      border-color: #e74c3c !important;
+    }
+
+    .error-msg {
+      color: #e74c3c;
+      font-size: 12px;
+      margin-top: -8px;
+      margin-bottom: 10px;
+      display: none;
     }
 
     #confirmation {
@@ -141,6 +214,15 @@
       margin-top: 12px;
       color: #27ae60;
       font-size: 14px;
+      text-align: center;
+    }
+
+    /* Rate limit warning */
+    #rate-warning {
+      display: none;
+      margin-top: 10px;
+      color: #e67e22;
+      font-size: 13px;
       text-align: center;
     }
 
@@ -160,14 +242,10 @@
       transition: background 0.2s;
     }
 
-    #dark-toggle:hover {
-      background-color: #3498db;
-    }
+    #dark-toggle:hover { background-color: #3498db; }
 
     /* Dark Mode Styles */
-    body.dark {
-      background-color: #121212;
-    }
+    body.dark { background-color: #121212; }
 
     body.dark #nav-frame {
       background-color: #1e1e2e;
@@ -179,30 +257,22 @@
       color: #888aaa;
     }
 
-    body.dark .divider {
-      background-color: #0d0d1a;
-    }
+    body.dark #log-panel { border-top-color: #2a2a3e; }
+    body.dark #log-toggle { color: #888aaa; }
+    body.dark .log-entry { color: #666888; }
 
-    body.dark #main-frame {
-      background-color: #1a1a2e;
-    }
+    body.dark .divider { background-color: #0d0d1a; }
 
-    body.dark #main-frame h1 {
-      color: #e0e0e0;
-    }
-
-    body.dark #main-frame p.subtitle {
-      color: #888aaa;
-    }
+    body.dark #main-frame { background-color: #1a1a2e; }
+    body.dark #main-frame h1 { color: #e0e0e0; }
+    body.dark #main-frame p.subtitle { color: #888aaa; }
 
     body.dark .message-box {
       background-color: #252535;
       box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     }
 
-    body.dark .message-box h3 {
-      color: #e0e0e0;
-    }
+    body.dark .message-box h3 { color: #e0e0e0; }
 
     body.dark .message-box input[type="text"],
     body.dark .message-box textarea {
@@ -216,9 +286,7 @@
       color: #2c3e50;
     }
 
-    body.dark #dark-toggle:hover {
-      background-color: #bdc3c7;
-    }
+    body.dark #dark-toggle:hover { background-color: #bdc3c7; }
   </style>
 </head>
 <body>
@@ -232,6 +300,15 @@
     <ul>
       <li><a href="#" class="active">Home</a></li>
     </ul>
+
+    <!-- Activity Log Panel -->
+    <div id="log-panel">
+      <button id="log-toggle" onclick="toggleLog()">
+        <span>Activity Log</span><span id="log-arrow">&#9650;</span>
+      </button>
+      <div id="log-entries"></div>
+      <button id="log-clear" onclick="clearLog()">Clear log</button>
+    </div>
   </div>
 
   <div class="divider"></div>
@@ -243,33 +320,156 @@
 
     <div class="message-box">
       <h3>Send Me a Message</h3>
-      <input type="text" id="sender-name" placeholder="Your name" />
-      <textarea id="message-text" placeholder="Write your message here..."></textarea>
+      <input type="text" id="sender-name" placeholder="Your name" maxlength="100"
+             oninput="clearFieldError('sender-name', 'name-error')" />
+      <p class="error-msg" id="name-error"></p>
+      <textarea id="message-text" placeholder="Write your message here..." maxlength="1000"
+                oninput="clearFieldError('message-text', 'msg-error')"></textarea>
+      <p class="error-msg" id="msg-error"></p>
       <button onclick="sendMessage()">Send Message</button>
+      <p id="rate-warning"></p>
       <p id="confirmation">Message sent! Thanks for reaching out.</p>
     </div>
   </div>
 
   <script>
+    // ── Logging ────────────────────────────────────────────────────────────
+    const LOG_KEY = 'milind_page_log';
+    const MAX_LOG = 50;
+
+    function getLog() {
+      try { return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }
+      catch { return []; }
+    }
+
+    function saveLog(entries) {
+      localStorage.setItem(LOG_KEY, JSON.stringify(entries.slice(-MAX_LOG)));
+    }
+
+    function log(message, level = 'info') {
+      const entries = getLog();
+      const ts = new Date().toLocaleTimeString();
+      entries.push({ ts, message, level });
+      saveLog(entries);
+      renderLog();
+      console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'log'](
+        `[${ts}] [${level.toUpperCase()}] ${message}`
+      );
+    }
+
+    function renderLog() {
+      const entries = getLog();
+      const container = document.getElementById('log-entries');
+      container.innerHTML = entries.slice().reverse().map(e =>
+        `<div class="log-entry ${e.level}">[${e.ts}] ${sanitize(e.message)}</div>`
+      ).join('');
+    }
+
+    function toggleLog() {
+      const el = document.getElementById('log-entries');
+      const arrow = document.getElementById('log-arrow');
+      el.classList.toggle('open');
+      arrow.innerHTML = el.classList.contains('open') ? '&#9660;' : '&#9650;';
+    }
+
+    function clearLog() {
+      localStorage.removeItem(LOG_KEY);
+      renderLog();
+      log('Log cleared', 'info');
+    }
+
+    // ── Security Helpers ───────────────────────────────────────────────────
+
+    // Sanitize text for safe HTML insertion (prevents XSS)
+    function sanitize(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // Validate input: no HTML tags, within length
+    function validateInput(value, fieldName, maxLen) {
+      if (!value) return `${fieldName} is required.`;
+      if (value.length > maxLen) return `${fieldName} must be under ${maxLen} characters.`;
+      if (/<[^>]*>/.test(value)) return `${fieldName} must not contain HTML tags.`;
+      return null;
+    }
+
+    function showFieldError(fieldId, errorId, message) {
+      document.getElementById(fieldId).classList.add('field-error');
+      const el = document.getElementById(errorId);
+      el.textContent = message;
+      el.style.display = 'block';
+    }
+
+    function clearFieldError(fieldId, errorId) {
+      document.getElementById(fieldId).classList.remove('field-error');
+      document.getElementById(errorId).style.display = 'none';
+    }
+
+    // ── Rate Limiting ──────────────────────────────────────────────────────
+    const RATE_KEY   = 'milind_msg_timestamps';
+    const MAX_MSGS   = 3;    // max messages
+    const WINDOW_MS  = 60000; // per 60 seconds
+
+    function isRateLimited() {
+      const now = Date.now();
+      let timestamps = JSON.parse(localStorage.getItem(RATE_KEY) || '[]');
+      timestamps = timestamps.filter(t => now - t < WINDOW_MS);
+      if (timestamps.length >= MAX_MSGS) return true;
+      timestamps.push(now);
+      localStorage.setItem(RATE_KEY, JSON.stringify(timestamps));
+      return false;
+    }
+
+    function getRemainingCooldown() {
+      const now = Date.now();
+      const timestamps = JSON.parse(localStorage.getItem(RATE_KEY) || '[]')
+        .filter(t => now - t < WINDOW_MS);
+      if (timestamps.length < MAX_MSGS) return 0;
+      return Math.ceil((WINDOW_MS - (now - timestamps[0])) / 1000);
+    }
+
+    // ── App Logic ──────────────────────────────────────────────────────────
     function toggleDark() {
       const isDark = document.body.classList.toggle('dark');
       document.getElementById('dark-toggle').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+      log(`Theme switched to ${isDark ? 'dark' : 'light'} mode`);
     }
 
     function sendMessage() {
-      const name = document.getElementById('sender-name').value.trim();
-      const message = document.getElementById('message-text').value.trim();
-      if (!name || !message) {
-        alert('Please fill in both your name and a message.');
+      const nameVal = document.getElementById('sender-name').value.trim();
+      const msgVal  = document.getElementById('message-text').value.trim();
+
+      // Validate
+      const nameErr = validateInput(nameVal, 'Name', 100);
+      const msgErr  = validateInput(msgVal, 'Message', 1000);
+
+      if (nameErr) { showFieldError('sender-name', 'name-error', nameErr); log(`Validation failed: ${nameErr}`, 'warn'); }
+      if (msgErr)  { showFieldError('message-text', 'msg-error', msgErr);  log(`Validation failed: ${msgErr}`, 'warn'); }
+      if (nameErr || msgErr) return;
+
+      // Rate limit check
+      if (isRateLimited()) {
+        const secs = getRemainingCooldown();
+        const msg = `Too many messages. Please wait ${secs}s before sending again.`;
+        document.getElementById('rate-warning').textContent = msg;
+        document.getElementById('rate-warning').style.display = 'block';
+        log(`Rate limit hit for sender "${sanitize(nameVal)}"`, 'warn');
+        setTimeout(() => document.getElementById('rate-warning').style.display = 'none', secs * 1000);
         return;
       }
+
+      log(`Message sent by "${nameVal.substring(0, 30)}"`);
       document.getElementById('sender-name').value = '';
       document.getElementById('message-text').value = '';
       document.getElementById('confirmation').style.display = 'block';
-      setTimeout(() => {
-        document.getElementById('confirmation').style.display = 'none';
-      }, 4000);
+      setTimeout(() => document.getElementById('confirmation').style.display = 'none', 4000);
     }
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    log('Page loaded');
+    renderLog();
   </script>
 
 </body>
